@@ -640,6 +640,82 @@ lwip_close(int s)
   return 0;
 }
 
+#if LWIP_TCP
+/* Gateway diagnostic clients have one task owner. No listener, ISR or TCPIP
+ * thread callers: synchronization follows the socket-option API. No ABI change. */
+struct lwip_diag_socket_data {
+  struct netconn *conn;
+  sys_sem_t *completed_sem;
+  err_t err;
+  int abort_connection;
+  int can_send;
+};
+
+static void
+lwip_diag_socket_callback(void *arg)
+{
+  struct lwip_diag_socket_data *data = (struct lwip_diag_socket_data *)arg;
+  struct tcp_pcb *pcb = data->conn->pcb.tcp;
+  if (data->conn->state != NETCONN_NONE) {
+    data->err = ERR_INPROGRESS;
+  } else if (pcb != NULL && pcb->state == LISTEN) {
+    data->err = ERR_VAL;
+  } else if (data->abort_connection) {
+    if (pcb != NULL) {
+      /* err_tcp may clear this too. Detach before freeing even in TIME_WAIT. */
+      data->conn->pcb.tcp = NULL;
+      tcp_abort(pcb);
+    }
+    data->err = ERR_OK;
+  } else if (pcb == NULL) {
+    data->err = ERR_CLSD;
+  } else {
+    data->can_send = pcb->unsent == NULL && pcb->unacked == NULL;
+    data->err = ERR_OK;
+  }
+#if !LWIP_TCPIP_CORE_LOCKING
+  sys_sem_signal(data->completed_sem);
+#endif
+}
+
+static int
+lwip_diag_socket_operation(int s, int abort_connection)
+{
+  struct lwip_sock *sock = get_socket(s);
+  struct lwip_diag_socket_data data;
+  err_t err;
+  if (sock == NULL) return -1;
+  if (NETCONNTYPE_GROUP(netconn_type(sock->conn)) != NETCONN_TCP) {
+    sock_set_errno(sock, EOPNOTSUPP);
+    return -1;
+  }
+  data.conn = sock->conn;
+  data.err = ERR_VAL;
+  data.abort_connection = abort_connection;
+  data.can_send = 0;
+#if LWIP_TCPIP_CORE_LOCKING
+  data.completed_sem = NULL;
+#elif LWIP_NETCONN_SEM_PER_THREAD
+  data.completed_sem = LWIP_NETCONN_THREAD_SEM_GET();
+#else
+  data.completed_sem = &sock->conn->op_completed;
+#endif
+  err = tcpip_send_msg_wait_sem(lwip_diag_socket_callback, &data,
+                               data.completed_sem);
+  if (err == ERR_OK) err = data.err;
+  if (err != ERR_OK) {
+    sock_set_errno(sock, err_to_errno(err));
+    return -1;
+  }
+  return abort_connection ? lwip_close(s) : data.can_send;
+}
+
+/* On failure descriptor ownership stays with the caller for retry. */
+int lwip_abortclose(int s) { return lwip_diag_socket_operation(s, 1); }
+/* Only enqueue another bounded diagnostic line after previous bytes ACKed. */
+int lwip_diag_can_send(int s) { return lwip_diag_socket_operation(s, 0); }
+#endif /* LWIP_TCP */
+
 int
 lwip_connect(int s, const struct sockaddr *name, socklen_t namelen)
 {

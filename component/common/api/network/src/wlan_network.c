@@ -29,6 +29,11 @@
 #define CONFIG_INTERACTIVE_MODE     1
 #endif
 
+#if defined(CONFIG_EXAMPLE_SOCKET_TCP_TRX) && (CONFIG_EXAMPLE_SOCKET_TCP_TRX == 1) && CONFIG_INIT_NET && CONFIG_LWIP_LAYER
+#include "lwip/tcpip.h"
+#include "../../../example/socket_tcp_trx/gateway_diag.h"
+#endif
+
 #define STACKSIZE                   (512 + 768)
 
 xSemaphoreHandle uart_rx_interrupt_sema = NULL;
@@ -64,6 +69,13 @@ void init_thread(void *param)
 	xSemaphoreTake(uart_rx_interrupt_sema, 1/portTICK_RATE_MS);
 	start_interactive_mode();
 #endif	
+
+#if defined(CONFIG_EXAMPLE_SOCKET_TCP_TRX) && (CONFIG_EXAMPLE_SOCKET_TCP_TRX == 1) && CONFIG_INIT_NET && CONFIG_LWIP_LAYER
+	/* Publish only from the live TCPIP task after stack/netif initialization.
+	 * If enqueue fails, diagnostics stays dormant and cannot touch sockets. */
+	if (tcpip_callback_with_block(gateway_diag_network_ready, NULL, 0) != ERR_OK)
+		gateway_diag_event(GW_DIAG_LOG_ERROR, 3);
+#endif
 
 	/* Kill init thread after all init tasks done */
 	vTaskDelete(NULL);

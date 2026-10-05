@@ -1,2 +1,15 @@
 # Declare files that will always have CRLF line endings on checkout.
 *.* binary eol=lf
+
+# Preserve the vendor checkout's line-ending behavior while making source and
+# documentation changes reviewable as text in Git diffs.
+*.c diff
+*.h diff
+*.md diff
+*.py diff
+*.sh diff
+*.txt diff
+*.yaml diff
+*.yml diff
+.gitattributes diff
+.gitignore diff

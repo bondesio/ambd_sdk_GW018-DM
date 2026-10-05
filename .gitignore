@@ -1,0 +1,21 @@
+# Local compiler/toolchain and generated firmware outputs
+project/realtek_amebaD_va0_example/GCC-RELEASE/project_hp/toolchain/asdk/asdk-6.4.1-linux-newlib-build-2773-i686.tar.bz2
+project/realtek_amebaD_va0_example/GCC-RELEASE/project_hp/toolchain/linux/
+project/realtek_amebaD_va0_example/GCC-RELEASE/project_hp/asdk/build/
+project/realtek_amebaD_va0_example/GCC-RELEASE/project_hp/asdk/image/
+project/realtek_amebaD_va0_example/GCC-RELEASE/project_lp/toolchain/linux/
+project/realtek_amebaD_va0_example/GCC-RELEASE/project_lp/asdk/build/
+project/realtek_amebaD_va0_example/GCC-RELEASE/project_lp/asdk/image/
+
+# Local diagnostics/build scratch and Python bytecode
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.o
+*.d
+*.su
+*.i
+*.s
+project/realtek_amebaD_va0_example/inc/inc_hp/build_info.h
+project/realtek_amebaD_va0_example/inc/inc_lp/build_info.h
+component/common/example/ota_http/gw018_ota_config.h

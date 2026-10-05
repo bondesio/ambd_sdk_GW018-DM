@@ -5,6 +5,10 @@
 #include "device.h"
 #include "serial_api.h"
 #include "gpio_api.h"
+#include "platform_opts.h"
+#if CONFIG_EXAMPLE_SOCKET_TCP_TRX == 1
+#include <socket_tcp_trx/gateway_diag.h>
+#endif
 
 #define UART_TX    _PA_18
 #define UART_RX    _PA_19
@@ -150,6 +154,9 @@ static void app_dslp_wake(void)
 //default main
 int main(void)
 {
+#if CONFIG_EXAMPLE_SOCKET_TCP_TRX == 1
+	gateway_diag_boot_event(GW_DIAG_APP_START, 0);
+#endif
 	// Init red LED
 	gpio_init(&led_red, LED_RED);
 	gpio_dir(&led_red, PIN_OUTPUT);    // Direction: Output
@@ -193,6 +200,9 @@ int main(void)
 	/* pre-processor of application example */
 	pre_example_entry();
 
+#if CONFIG_EXAMPLE_SOCKET_TCP_TRX == 1
+	gateway_diag_boot_event(GW_DIAG_NETWORK_START, 0);
+#endif
 	wlan_network();
 	
 	/* Execute application example */

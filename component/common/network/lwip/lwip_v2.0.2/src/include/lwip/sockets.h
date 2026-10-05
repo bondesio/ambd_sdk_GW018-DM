@@ -490,6 +490,11 @@ int lwip_getsockopt (int s, int level, int optname, void *optval, socklen_t *opt
 int lwip_setsockopt (int s, int level, int optname, const void *optval, socklen_t optlen);
 int lwip_getsocklasterr(int s);			//Realtek add
 int lwip_close(int s);
+#if LWIP_TCP
+/* Exclusive task-owned diagnostic TCP clients only; not listener/ISR APIs. */
+int lwip_abortclose(int s);
+int lwip_diag_can_send(int s);
+#endif
 int lwip_connect(int s, const struct sockaddr *name, socklen_t namelen);
 int lwip_listen(int s, int backlog);
 int lwip_recv(int s, void *mem, size_t len, int flags);

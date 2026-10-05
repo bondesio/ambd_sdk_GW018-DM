@@ -18,6 +18,7 @@
 #include <wifi_constants.h>
 #include "wifi_conf.h"
 #include "gpio_api.h"
+#include "gw018_portal.h"
 
 #define LED_BLUE   _PB_22 	//Blue LED
 #define PUSH_BTN   _PB_23 	//Push button
@@ -26,7 +27,7 @@ gpio_t led_blue;
 gpio_t push_btn;
 
 #define PORT	8080
-#define HOST	"192.168.0.119"  //"m-apps.oss-cn-shenzhen.aliyuncs.com"
+#include "gw018_ota_config.h"
 #define RESOURCE "OTA_All.bin"     //"051103061600.bin"
 
 
@@ -43,56 +44,44 @@ void http_update_ota_task(void *param){
     gpio_init(&push_btn, PUSH_BTN);
     gpio_dir(&push_btn, PIN_INPUT);     // Direction: Input
     gpio_mode(&push_btn, PullNone);       // No pull
-	
+
 #if defined(configENABLE_TRUSTZONE) && (configENABLE_TRUSTZONE == 1)
 	rtw_create_secure_context(configMINIMAL_SECURE_STACK_SIZE);
 #endif
-	
+
 	printf("\n\r\n\r\n\r\n\r<<<<<< OTA HTTP Example >>>>>>>\n\r\n\r\n\r\n\r");
 
-	vTaskDelay(5000);
-
-	int counter = 0;
-
-	while(1) {
-
-        if (gpio_read(&push_btn)) {
-			if (counter > 0) {
-            	gpio_write(&led_blue, 0);
-				counter = 0;
-			}
-			vTaskDelay(1000);
-            continue;
-        } 
-		
-		if (counter < 3) {
-			// turn on LED
-            gpio_write(&led_blue, 1);
-			counter++;
-			printf("button pressed, counting to 3 ...\n");
-			vTaskDelay(1000);
-			continue;
+	vTaskDelay(pdMS_TO_TICKS(5000));
+	int down = 0;
+	int long_press_done = 0;
+	TickType_t pressed_at = 0;
+	for (;;) {
+		int now_down = !gpio_read(&push_btn);
+		TickType_t now = xTaskGetTickCount();
+		if (now_down && !down) {
+			down = 1;
+			long_press_done = 0;
+			pressed_at = now;
+			gpio_write(&led_blue, 1);
+		} else if (now_down && down && !long_press_done &&
+		           (TickType_t)(now - pressed_at) >= pdMS_TO_TICKS(3000)) {
+			long_press_done = 1;
+			printf("GW018: long press, starting OTA update\n");
+			while (wifi_is_ready_to_transceive(RTW_STA_INTERFACE) != RTW_SUCCESS)
+				vTaskDelay(pdMS_TO_TICKS(1000));
+			int ret = http_update_ota(HOST, PORT, RESOURCE);
+			if (ret == 0) ota_platform_reset();
+			printf("GW018: OTA update failed; button remains available\n");
+		} else if (!now_down && down) {
+			TickType_t held = now - pressed_at;
+			down = 0;
+			gpio_write(&led_blue, 0);
+			if (!long_press_done && held >= pdMS_TO_TICKS(60) &&
+			    held <= pdMS_TO_TICKS(1200)) gw018_portal_toggle();
 		}
-
-		printf("let's start ota update ...\n");
-		break;
+		gw018_portal_tick();
+		vTaskDelay(pdMS_TO_TICKS(50));
 	}
-
-	while(wifi_is_ready_to_transceive(RTW_STA_INTERFACE) != RTW_SUCCESS){
-		printf("Wait for WIFI connection ...\n");
-		vTaskDelay(1000);
-	}
-
-	int ret = -1;
-	ret = http_update_ota(HOST, PORT, RESOURCE);
-
-
-	printf("\n\r[%s] Update task exit", __FUNCTION__);
-	if(!ret){
-		printf("\n\r[%s] Ready to reboot", __FUNCTION__);	
-		ota_platform_reset();
-	}
-	vTaskDelete(NULL);	
 }
 
 
@@ -102,4 +91,3 @@ void example_ota_http(void){
 	}
 }
 #endif
-

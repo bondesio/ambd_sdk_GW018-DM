@@ -92,6 +92,7 @@ CSRC += $(DIR)/mqtt/example_mqtt.c
 CSRC += $(DIR)/httpd/example_httpd.c
 CSRC += $(DIR)/httpd/example_httpc.c
 CSRC += $(DIR)/ota_http/example_ota_http.c
+CSRC += $(DIR)/ota_http/gw018_portal.c
 #CSRC += $(DIR)/ota_https/example_ota_https.c
 CSRC += $(DIR)/ota_sdcard/example_ota_sdcard.c
 CSRC += $(DIR)/dct/example_dct.c
@@ -104,6 +105,7 @@ CSRC += $(DIR)/uart_firmware_update/example_uart_update.c
 CSRC += $(DIR)/cJSON/example_cJSON.c
 #CSRC += $(DIR)/sdcard_upload_httpd/example_sdcard_upload_httpd.c
 CSRC += $(DIR)/socket_tcp_trx/example_socket_tcp_trx_1.c
+CSRC += $(DIR)/socket_tcp_trx/gateway_diag.c
 CSRC += $(DIR)/socket_tcp_trx/example_socket_tcp_trx_2.c
 # MMF AUDIO EXAMPLE
 # CSRC += $(DIR)/media_framework/example_media_framework.c

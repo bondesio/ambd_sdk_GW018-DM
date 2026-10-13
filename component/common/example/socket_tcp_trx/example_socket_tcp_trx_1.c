@@ -16,6 +16,9 @@ extern struct netif xnetif[NET_IF_NUM];
 
 #define SERVER_PORT     80
 #define LISTEN_QLEN     2
+#define BRIDGE_KEEPALIVE_IDLE_SEC      30
+#define BRIDGE_KEEPALIVE_INTERVAL_SEC  10
+#define BRIDGE_KEEPALIVE_COUNT         3
 
 #define UART_TX    	_PA_18	//UART0  TX
 #define UART_RX    	_PA_19	//UART0  RX
@@ -195,9 +198,10 @@ static void rx_thread(void *param)
 #if LWIP_VERSION_MAJOR >= 2
 			||(sock_err == 0)
 #endif
-		))
+		)) {
+			vTaskDelay(pdMS_TO_TICKS(10));
 			continue;
-		else if(ret <= 0) {
+		} else if(ret <= 0) {
 			exit_reason = ret == 0 ? 1 : 2;
 			if (ret < 0)
 				gateway_diag_add(GW_DIAG_TCP_RECV_ERRORS, 1);
@@ -308,6 +312,17 @@ static void example_socket_tcp_trx_thread(void *param)
 		if (incoming_fd < 0)
 			continue;
 		if (client_fd >= 0) {
+			close(incoming_fd);
+			continue;
+		}
+		int keepalive = 1;
+		int keepalive_idle = BRIDGE_KEEPALIVE_IDLE_SEC;
+		int keepalive_interval = BRIDGE_KEEPALIVE_INTERVAL_SEC;
+		int keepalive_count = BRIDGE_KEEPALIVE_COUNT;
+		if (setsockopt(incoming_fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive)) != 0 ||
+		    setsockopt(incoming_fd, IPPROTO_TCP, TCP_KEEPIDLE, &keepalive_idle, sizeof(keepalive_idle)) != 0 ||
+		    setsockopt(incoming_fd, IPPROTO_TCP, TCP_KEEPINTVL, &keepalive_interval, sizeof(keepalive_interval)) != 0 ||
+		    setsockopt(incoming_fd, IPPROTO_TCP, TCP_KEEPCNT, &keepalive_count, sizeof(keepalive_count)) != 0) {
 			close(incoming_fd);
 			continue;
 		}

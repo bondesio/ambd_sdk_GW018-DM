@@ -4,6 +4,11 @@ The firmware has an optional structured diagnostic listener on TCP port 81.
 Port 80 remains the Zigbee UART bridge. The diagnostic service accepts a
 single stream client and does not read from or write to the Zigbee UART.
 
+The accepted port 80 bridge socket enables TCP keepalive with a 30-second idle
+period, 10-second probe interval, and three probes. This lets the bridge reclaim
+a connection after its peer disappears without a clean TCP close. Its
+nonblocking idle-read loop yields for 10 ms between polls.
+
 ## What the stream contains
 
 The service reports selected startup/network/bridge events, bridge byte and
